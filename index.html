@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="ps" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#14532d">
+<meta name="description" content="Easy Load Calculator - د ایزیلوډ او مشتریانو د بقایا حساب">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<title>Easy Load Calculator</title>
+<style>
+*{box-sizing:border-box}body{margin:0;padding:16px;background:#f1f5f9;color:#172033;font-family:Tahoma,Arial,sans-serif}
+main{max-width:520px;margin:18px auto;background:#fff;padding:21px;border-radius:20px;box-shadow:0 10px 30px #0f172a15}
+h1{font-size:23px;margin:0 0 8px}.hint{color:#64748b;font-size:14px;line-height:1.8;margin:0 0 18px}
+label{display:block;font-weight:700;margin:14px 0 7px}
+input{width:100%;padding:13px;border:1px solid #cbd5e1;border-radius:11px;font-size:17px}
+input:focus{outline:2px solid #86efac;border-color:#16a34a}
+.panel{margin-top:18px;padding:16px;background:#f0fdf4;border-radius:14px}
+.big{font-size:29px;font-weight:800;color:#166534;margin:8px 0}
+.line{display:flex;justify-content:space-between;gap:10px;margin-top:10px;color:#475569}
+.receipt{background:white;border:1px dashed #86efac;border-radius:10px;padding:12px;margin-top:14px;line-height:1.9;white-space:pre-wrap}
+button{width:100%;border:0;border-radius:11px;padding:13px;font-size:15px;font-weight:700;margin-top:11px;cursor:pointer}
+.primary{background:#14532d;color:white}.secondary{background:#e2e8f0;color:#1e293b}.danger{background:#fee2e2;color:#991b1b}
+.warn{color:#b91c1c;font-size:13px;margin-top:9px;display:none}
+h2{font-size:19px;margin:24px 0 10px}
+.record{border:1px solid #e2e8f0;border-radius:12px;padding:12px;margin-top:10px}
+.record-head{display:flex;justify-content:space-between;gap:8px;align-items:center;font-weight:700}
+.record small{color:#64748b;display:block;margin-top:5px;line-height:1.7}
+.record button{width:auto;padding:8px 11px;font-size:13px;margin:8px 5px 0 0}
+.empty{color:#64748b;font-size:14px;padding:12px;background:#f8fafc;border-radius:10px}
+.note{font-size:12px;color:#64748b;line-height:1.8;margin-top:16px}
+.install{background:#166534;color:white;display:none}
+</style></head>
+<body><main>
+<h1>Easy Load Calculator</h1>
+<p class="hint">د مشتری نوم او پیسې ولیکه. حساب وګوره او رسید ثبت کړه.</p>
+<button class="install" id="install">اپلیکیشن په موبایل کې انسټال کړه</button>
+<label for="shop">د کمېشنکارۍ نوم</label><input id="shop" type="text" placeholder="Easy Load Calculator">
+<label for="customer">د مشتری نوم</label><input id="customer" type="text" placeholder="د مشتری نوم">
+<label for="received">مشتري څومره پیسې درکړې؟ (افغانۍ)</label><input id="received" type="number" min="0" inputmode="decimal" placeholder="لکه: 55500" value="55500">
+<label for="loaded">څومره ایزیلوډ دې ورکړی؟ (افغانۍ)</label><input id="loaded" type="number" min="0" inputmode="decimal" placeholder="لکه: 550" value="550">
+<section class="panel" aria-live="polite">
+<div>د مشتری پاتې پیسې</div><div class="big" id="balance">54,950 افغانۍ</div>
+<div class="line"><span>ترلاسه شوې پیسې:</span><strong id="rline">55,500</strong></div>
+<div class="line"><span>ورکړل شوی ایزیلوډ:</span><strong id="lline">550</strong></div>
+<div class="receipt" id="receipt"></div>
+<div class="warn" id="warning">خبرتیا: ایزیلوډ د ترلاسه شویو پیسو څخه زیات دی.</div>
+</section>
+<button class="primary" id="save">رسید ثبت کړه</button>
+<button class="secondary" id="copy">رسید کاپي کړه</button>
+<button class="secondary" id="reset">د نوي مشتری لپاره تش کړه</button>
+<h2>د پخوانیو مشتریانو رسیدونه</h2>
+<div id="records" class="empty">تر اوسه هېڅ رسید نه دی ثبت شوی.</div>
+<button class="danger" id="clear">ټول ثبت شوي رسیدونه پاک کړه</button>
+<p class="note">رسیدونه د همدې موبایل په براوزر کې ساتل کېږي. دا اپلیکیشن حساب او رسید جوړوي؛ پیسې یا ایزیلوډ نه لېږي.</p>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const shop=$('shop'),customer=$('customer'),received=$('received'),loaded=$('loaded');
+const fmt=n=>n.toLocaleString('en-US',{maximumFractionDigits:2});
+const ps=n=>String(n).replace(/\d/g,d=>'۰۱۲۳۴۵۶۷۸۹'[Number(d)]);
+let records=[];try{records=JSON.parse(localStorage.getItem('commissionReceipts')||'[]');if(!Array.isArray(records))records=[];}catch(e){records=[];}
+try{shop.value=localStorage.getItem('commissionShop')||'Easy Load Calculator';}catch(e){shop.value='Easy Load Calculator';}
+function values(){const r=Math.max(0,Number(received.value)||0),l=Math.max(0,Number(loaded.value)||0);return {r,l,b:r-l};}
+function receiptText(){const {r,l,b}=values(),name=shop.value.trim()||'Easy Load Calculator',person=customer.value.trim()||'بې نومه مشتری';return `${name}\nمشتری: ${person}\nترلاسه شوې پیسې: ${ps(fmt(r))} افغانۍ\nایزیلوډ: ${ps(fmt(l))} افغانۍ\nپاتې پیسې: ${ps(fmt(b))} افغانۍ`;}
+function calc(){const {r,l,b}=values();$('balance').textContent=fmt(b)+' افغانۍ';$('balance').style.color=b<0?'#b91c1c':'#166534';$('rline').textContent=fmt(r);$('lline').textContent=fmt(l);$('receipt').textContent=receiptText();$('warning').style.display=b<0?'block':'none';}
+function persist(){try{localStorage.setItem('commissionReceipts',JSON.stringify(records));localStorage.setItem('commissionShop',shop.value);}catch(e){alert('د موبایل حافظه کې د ثبت ستونزه ده.');}}
+function render(){const root=$('records');if(!records.length){root.className='empty';root.textContent='تر اوسه هېڅ رسید نه دی ثبت شوی.';return;}root.className='';root.innerHTML='';records.slice().reverse().forEach(rec=>{const card=document.createElement('div');card.className='record';const head=document.createElement('div');head.className='record-head';const name=document.createElement('span');name.textContent=rec.customer+' — '+fmt(rec.balance)+' افغانۍ پاتې';head.append(name);card.append(head);const date=document.createElement('small');date.textContent=rec.date+' | '+rec.shop;card.append(date);const details=document.createElement('small');details.textContent='ترلاسه: '+fmt(rec.received)+' | ایزیلوډ: '+fmt(rec.loaded);card.append(details);const copy=document.createElement('button');copy.className='secondary';copy.textContent='رسید کاپي';copy.addEventListener('click',()=>copyText(rec.text));const del=document.createElement('button');del.className='danger';del.textContent='ړنګول';del.addEventListener('click',()=>{records=records.filter(x=>x.id!==rec.id);persist();render();});card.append(copy,del);root.append(card);});}
+async function copyText(txt){try{await navigator.clipboard.writeText(txt);alert('رسید کاپي شو.');}catch(e){prompt('رسید کاپي کړه:',txt);}}
+[shop,customer,received,loaded].forEach(el=>el.addEventListener('input',calc));
+shop.addEventListener('change',()=>{try{localStorage.setItem('commissionShop',shop.value)}catch(e){}});
+$('save').addEventListener('click',()=>{const {r,l,b}=values();if(!customer.value.trim()){alert('د مشتری نوم ولیکه.');customer.focus();return;}if(!received.value||!loaded.value){alert('د پیسو او ایزیلوډ اندازه ولیکه.');return;}if(b<0){alert('ایزیلوډ له ترلاسه شویو پیسو زیات دی.');return;}const rec={id:Date.now().toString(),shop:shop.value.trim()||'Easy Load Calculator',customer:customer.value.trim(),received:r,loaded:l,balance:b,date:new Date().toLocaleString(),text:receiptText()};records.push(rec);persist();render();alert('رسید ثبت شو.');});
+$('copy').addEventListener('click',()=>copyText(receiptText()));
+$('reset').addEventListener('click',()=>{customer.value='';received.value='';loaded.value='';calc();});
+$('clear').addEventListener('click',()=>{if(confirm('ایا ټول رسیدونه پاک کړې؟')){records=[];persist();render();}});
+calc();render();
+let installPrompt=null;const installBtn=$('install');
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installPrompt=e;installBtn.style.display='block';});
+installBtn.addEventListener('click',async()=>{if(!installPrompt)return;installPrompt.prompt();await installPrompt.userChoice;installPrompt=null;installBtn.style.display='none';});
+if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));}
+</script></body></html>
